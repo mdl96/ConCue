@@ -20,11 +20,11 @@
     
     <style>
         body {
-            background-color: #f0f0f0; /* Leicht grauer Hintergrund schont die Augen bei visueller Suche */
+            background-color: #f0f0f0;
             color: #333333;
         }
         canvas {
-            background-color: #ffffff; /* Weißes Suchfeld */
+            background-color: #ffffff;
             box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
         }
     </style>
@@ -36,26 +36,24 @@
         // ==========================================
         const jsPsych = initJsPsych();
 
-        // Globale Variablen
         const EXPERIMENT_CONFIG = {
             numBlocks: 10,
             trialsPerBlock: 24, // 12 Old, 12 New
             setSize: 12,        // 1 Target, 11 Distraktoren
-            gridColumns: 8,     // Raster für die Elementplatzierung
+            gridColumns: 8,     
             gridRows: 6,
-            cellSize: 80,       // Größe einer Rasterzelle in Pixeln
-            stimSize: 30,       // Linienlänge der Ts und Ls
+            cellSize: 80,       
+            stimSize: 30,       
             keys: {
-                left: 'f',      // Target zeigt nach links
-                right: 'j'      // Target zeigt nach rechts
+                left: 'f',      
+                right: 'j'      
             }
         };
 
-        // Die Haupt-Timeline initialisieren
         const timeline = [];
 
         // ==========================================
-        // TASK 7a: Instruktionen & Demographie (am Anfang)
+        // TASK 7a: Instruktionen & Demographie
         // ==========================================
         const welcome = {
             type: jsPsychHtmlKeyboardResponse,
@@ -188,7 +186,6 @@
             return positions.slice(0, numPositions);
         }
 
-        // Die 12 "Old"-Displays vorab generieren
         const oldDisplays = [];
         const numOldDisplays = EXPERIMENT_CONFIG.trialsPerBlock / 2;
 
@@ -317,7 +314,6 @@
         }
 
         for (let b = 1; b <= EXPERIMENT_CONFIG.numBlocks; b++) {
-            
             const block_node = {
                 timeline: [fixation, searchDisplay, iti],
                 timeline_variables: generateBlockVariables(),
@@ -363,7 +359,7 @@
         timeline.push(save_data);
 
         // ==========================================
-        // TASK 7b: Abschlussbildschirm (am Ende)
+        // TASK 7b: Abschlussbildschirm
         // ==========================================
         const debriefing = {
             type: jsPsychHtmlKeyboardResponse,
