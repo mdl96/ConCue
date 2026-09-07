@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contextual Cueing Experiment</title>
+    
+    <!-- jsPsych v7 Basis & CSS -->
+    <script src="https://unpkg.com/jspsych@7.3.4"></script>
+    <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
+    
+    <!-- jsPsych Plugins -->
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-canvas-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-html-form@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3"></script>
+    
+    <!-- DataPipe Plugin -->
+    <script src="https://unpkg.com/@jspsych-contrib/plugin-pipe"></script>
+    
+    <style>
+        body {
+            background-color: #f0f0f0; /* Leicht grauer Hintergrund schont die Augen bei visueller Suche */
+            color: #333333;
+        }
+        canvas {
+            background-color: #ffffff; /* Weißes Suchfeld */
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <script>
+        // ==========================================
+        // TASK 1: jsPsych initialisieren & Setup
+        // ==========================================
+        const jsPsych = initJsPsych();
+
+        // Globale Variablen
+        const EXPERIMENT_CONFIG = {
+            numBlocks: 10,
+            trialsPerBlock: 24, // 12 Old, 12 New
+            setSize: 12,        // 1 Target, 11 Distraktoren
+            gridColumns: 8,     // Raster für die Elementplatzierung
+            gridRows: 6,
+            cellSize: 80,       // Größe einer Rasterzelle in Pixeln
+            stimSize: 30,       // Linienlänge der Ts und Ls
+            keys: {
+                left: 'f',      // Target zeigt nach links
+                right: 'j'      // Target zeigt nach rechts
+            }
+        };
+
+        // Die Haupt-Timeline initialisieren
+        const timeline = [];
+
+        // ==========================================
+        // TASK 7a: Instruktionen & Demographie (am Anfang)
+        // ==========================================
+        const welcome = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `
+                <h2>Willkommen zum Experiment!</h2>
+                <p>Vielen Dank für deine Teilnahme.</p>
+                <p>Dieses Experiment untersucht Prozesse der visuellen Suche und wird ca. 8-10 Minuten dauern.</p>
+                <p>Drücke die <strong>Leertaste</strong>, um fortzufahren.</p>
+            `,
+            choices: [' ']
+        };
+        timeline.push(welcome);
+
+        const demographics = {
+            type: jsPsychSurveyHtmlForm,
+            preamble: '<h3>Bitte mache noch ein paar kurze Angaben zu deiner Person:</h3>',
+            html: `
+                <p>
+                    <label for="age">Alter:</label><br>
+                    <input type="number" id="age" name="age" required min="10" max="99" style="padding: 5px; width: 100px;">
+                </p>
+                <p>
+                    <label for="gender">Geschlecht:</label><br>
+                    <select id="gender" name="gender" required style="padding: 5px; width: 150px;">
+                        <option value="" disabled selected>Bitte wählen...</option>
+                        <option value="weiblich">Weiblich</option>
+                        <option value="männlich">Männlich</option>
+                        <option value="divers">Divers</option>
+                    </select>
+                </p>
+            `,
+            button_label: 'Weiter zu den Instruktionen'
+        };
+        timeline.push(demographics);
+
+        const instructions = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `
+                <h2>Instruktionen</h2>
+                <p>In diesem Experiment wirst du auf dem Bildschirm viele "L"s und genau <strong>ein "T"</strong> sehen.</p>
+                <p>Deine Aufgabe ist es, so schnell und fehlerfrei wie möglich das <strong>T</strong> zu finden.</p>
+                <p>Das "T" liegt auf der Seite und ist entweder nach links oder nach rechts gedreht.</p>
+                <br>
+                <div style="background-color: #fff; border: 1px solid #ccc; padding: 15px; display: inline-block; border-radius: 8px;">
+                    <p>Reagiere wie folgt:</p>
+                    <p>Wenn der Stamm des T nach <strong>LINKS</strong> zeigt: Drücke die Taste <strong>${EXPERIMENT_CONFIG.keys.left.toUpperCase()}</strong></p>
+                    <p>Wenn der Stamm des T nach <strong>RECHTS</strong> zeigt: Drücke die Taste <strong>${EXPERIMENT_CONFIG.keys.right.toUpperCase()}</strong></p>
+                </div>
+                <br><br>
+                <p>Versuche, deinen Blick zu Beginn jedes Durchgangs auf das Fixationskreuz (+) in der Mitte zu richten.</p>
+                <p>Drücke die <strong>Leertaste</strong>, um das Experiment zu starten!</p>
+            `,
+            choices: [' ']
+        };
+        timeline.push(instructions);
+
+        // ==========================================
+        // TASK 2: Stimulus-Generierung (Canvas)
+        // ==========================================
+        function drawTarget(ctx, x, y, size, direction) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(direction === 'left' ? -Math.PI/2 : Math.PI/2);
+            
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-size/2, -size/2);
+            ctx.lineTo(size/2, -size/2);
+            ctx.moveTo(0, -size/2);
+            ctx.lineTo(0, size/2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawDistractor(ctx, x, y, size, rotation) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation * (Math.PI/180));
+            
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, -size/2);
+            ctx.lineTo(0, size/2);
+            ctx.moveTo(0, size/2);
+            ctx.lineTo(size/2, size/2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawSearchDisplay(canvas, displayItems) {
+            const ctx = canvas.getContext('2d');
+            canvas.width = EXPERIMENT_CONFIG.gridColumns * EXPERIMENT_CONFIG.cellSize;
+            canvas.height = EXPERIMENT_CONFIG.gridRows * EXPERIMENT_CONFIG.cellSize;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            displayItems.forEach(item => {
+                const px = (item.col * EXPERIMENT_CONFIG.cellSize) + (EXPERIMENT_CONFIG.cellSize / 2);
+                const py = (item.row * EXPERIMENT_CONFIG.cellSize) + (EXPERIMENT_CONFIG.cellSize / 2);
+                
+                const jitterX = (Math.random() - 0.5) * (EXPERIMENT_CONFIG.cellSize * 0.4);
+                const jitterY = (Math.random() - 0.5) * (EXPERIMENT_CONFIG.cellSize * 0.4);
+                
+                const finalX = px + jitterX;
+                const finalY = py + jitterY;
+
+                if (item.isTarget) {
+                    drawTarget(ctx, finalX, finalY, EXPERIMENT_CONFIG.stimSize, item.direction);
+                } else {
+                    drawDistractor(ctx, finalX, finalY, EXPERIMENT_CONFIG.stimSize, item.rotation);
+                }
+            });
+        }
+
+        // ==========================================
+        // TASK 3: Kernlogik & Bedingungs-Management
+        // ==========================================
+        function getRandomPositions(numPositions) {
+            let positions = [];
+            for (let r = 0; r < EXPERIMENT_CONFIG.gridRows; r++) {
+                for (let c = 0; c < EXPERIMENT_CONFIG.gridColumns; c++) {
+                    positions.push({ row: r, col: c });
+                }
+            }
+            for (let i = positions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [positions[i], positions[j]] = [positions[j], positions[i]];
+            }
+            return positions.slice(0, numPositions);
+        }
+
+        // Die 12 "Old"-Displays vorab generieren
+        const oldDisplays = [];
+        const numOldDisplays = EXPERIMENT_CONFIG.trialsPerBlock / 2;
+
+        for (let i = 0; i < numOldDisplays; i++) {
+            const positions = getRandomPositions(EXPERIMENT_CONFIG.setSize);
+            const targetPos = positions[0];
+            const distractorPositions = positions.slice(1);
+            
+            const distractors = distractorPositions.map(pos => ({
+                row: pos.row,
+                col: pos.col,
+                rotation: [0, 90, 180, 270][Math.floor(Math.random() * 4)] 
+            }));
+
+            oldDisplays.push({
+                id: i,
+                targetPos: targetPos,
+                distractors: distractors
+            });
+        }
+
+        function createTrialDisplay(condition, oldDisplayConfig = null) {
+            let displayItems = [];
+            let targetDir = Math.random() < 0.5 ? 'left' : 'right'; 
+
+            if (condition === 'old') {
+                displayItems.push({
+                    isTarget: true,
+                    row: oldDisplayConfig.targetPos.row,
+                    col: oldDisplayConfig.targetPos.col,
+                    direction: targetDir
+                });
+                oldDisplayConfig.distractors.forEach(d => {
+                    displayItems.push({
+                        isTarget: false,
+                        row: d.row,
+                        col: d.col,
+                        rotation: d.rotation
+                    });
+                });
+            } else { 
+                const positions = getRandomPositions(EXPERIMENT_CONFIG.setSize);
+                displayItems.push({
+                    isTarget: true,
+                    row: positions[0].row,
+                    col: positions[0].col,
+                    direction: targetDir
+                });
+                for (let i = 1; i < positions.length; i++) {
+                    displayItems.push({
+                        isTarget: false,
+                        row: positions[i].row,
+                        col: positions[i].col,
+                        rotation: [0, 90, 180, 270][Math.floor(Math.random() * 4)]
+                    });
+                }
+            }
+            return { items: displayItems, targetDirection: targetDir };
+        }
+
+        // ==========================================
+        // TASK 4: Ablauf eines einzelnen Trials
+        // ==========================================
+        const fixation = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '<div style="font-size: 60px; color: #555;">+</div>',
+            choices: "NO_KEYS",
+            trial_duration: 500,
+            data: { task: 'fixation' }
+        };
+
+        const searchDisplay = {
+            type: jsPsychCanvasKeyboardResponse,
+            canvas_draw: function(canvas) {
+                const condition = jsPsych.timelineVariable('condition');
+                const oldDisplayConfig = jsPsych.timelineVariable('oldConfig');
+                
+                const displayData = createTrialDisplay(condition, oldDisplayConfig);
+                
+                const correctKey = displayData.targetDirection === 'left' ? EXPERIMENT_CONFIG.keys.left : EXPERIMENT_CONFIG.keys.right;
+                jsPsych.getCurrentTrial().data.correct_response = correctKey;
+                jsPsych.getCurrentTrial().data.condition = condition;
+                
+                if (condition === 'old') {
+                    jsPsych.getCurrentTrial().data.old_display_id = oldDisplayConfig.id;
+                }
+
+                drawSearchDisplay(canvas, displayData.items);
+            },
+            choices: [EXPERIMENT_CONFIG.keys.left, EXPERIMENT_CONFIG.keys.right],
+            data: { task: 'search_trial' },
+            on_finish: function(data) {
+                data.correct = jsPsych.pluginAPI.compareKeys(data.response, data.correct_response);
+            }
+        };
+
+        const iti = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: '',
+            choices: "NO_KEYS",
+            trial_duration: 500, 
+            data: { task: 'iti' }
+        };
+
+        // ==========================================
+        // TASK 5: Experiment-Struktur (Blöcke & Pausen)
+        // ==========================================
+        function generateBlockVariables() {
+            let blockVars = [];
+            
+            for (let i = 0; i < oldDisplays.length; i++) {
+                blockVars.push({
+                    condition: 'old',
+                    oldConfig: oldDisplays[i] 
+                });
+            }
+            
+            for (let i = 0; i < (EXPERIMENT_CONFIG.trialsPerBlock / 2); i++) {
+                blockVars.push({
+                    condition: 'new',
+                    oldConfig: null
+                });
+            }
+            
+            return jsPsych.randomization.shuffle(blockVars);
+        }
+
+        for (let b = 1; b <= EXPERIMENT_CONFIG.numBlocks; b++) {
+            
+            const block_node = {
+                timeline: [fixation, searchDisplay, iti],
+                timeline_variables: generateBlockVariables(),
+                data: { block_num: b } 
+            };
+            timeline.push(block_node);
+
+            if (b < EXPERIMENT_CONFIG.numBlocks) {
+                const pause_screen = {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: `
+                        <h2>Pause</h2>
+                        <p>Du hast Block ${b} von ${EXPERIMENT_CONFIG.numBlocks} abgeschlossen.</p>
+                        <p>Ruhe deine Augen kurz aus.</p>
+                        <p>Drücke die <strong>Leertaste</strong>, um mit dem nächsten Block fortzufahren.</p>
+                    `,
+                    choices: [' ']
+                };
+                timeline.push(pause_screen);
+            }
+        }
+
+        // ==========================================
+        // TASK 6: Datenspeicherung (DataPipe)
+        // ==========================================
+        const subject_id = jsPsych.randomization.randomID(10);
+        
+        const date = new Date();
+        const timestamp = date.toISOString().split('T')[0] + '_' + date.getHours() + '-' + date.getMinutes();
+        const filename = `data_${subject_id}_${timestamp}.csv`;
+
+        jsPsych.data.addProperties({
+            subject: subject_id
+        });
+
+        const save_data = {
+            type: jsPsychPipe,
+            action: "save",
+            experiment_id: "Ljk0ja7hQe3z",
+            filename: filename,
+            data_string: () => jsPsych.data.get().csv()
+        };
+        timeline.push(save_data);
+
+        // ==========================================
+        // TASK 7b: Abschlussbildschirm (am Ende)
+        // ==========================================
+        const debriefing = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `
+                <h2>Experiment beendet!</h2>
+                <p>Vielen Dank für deine Teilnahme.</p>
+                <p>Deine Daten wurden erfolgreich gespeichert.</p>
+                <p>Du kannst dieses Fenster nun schließen.</p>
+            `,
+            choices: "NO_KEYS" 
+        };
+        timeline.push(debriefing);
+
+        // ==========================================
+        // EXPERIMENT STARTEN
+        // ==========================================
+        jsPsych.run(timeline);
+    </script>
+</body>
+</html>
