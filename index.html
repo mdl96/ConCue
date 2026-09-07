@@ -83,15 +83,15 @@
         };
         timeline.push(welcome);
 
-        const demographics = {
+   const demographics = {
             type: jsPsychHtmlKeyboardResponse,
             stimulus: `
                 <div class="demo-container">
                     <h3>Angaben zur Person</h3>
-                    <label for="age">Alter (mind. 10 Jahre):</label>
-                    <input type="number" id="age_input" min="10" max="99" value="20">
+                    <label for="age_input">Alter (mind. 10 Jahre):</label><br>
+                    <input type="number" id="age_input" min="10" max="99" value="20"><br><br>
                     
-                    <label for="gender">Geschlecht:</label>
+                    <label for="gender_input">Geschlecht:</label><br>
                     <select id="gender_input">
                         <option value="weiblich">Weiblich</option>
                         <option value="männlich">Männlich</option>
@@ -101,17 +101,25 @@
                 </div>
             `,
             choices: [' '],
+            on_load: function() {
+                // Verhindert, dass die Leertaste das Input-Feld beeinträchtigt, falls reingeklickt wurde
+                document.getElementById('age_input').focus();
+            },
             on_finish: function(data) {
-                // Eingaben direkt in die jsPsych-Daten schreiben
-                const ageVal = document.getElementById('age_input').value;
-                const genderVal = document.getElementById('gender_input').value;
+                // Werte sicher auslesen, solange das DOM-Element noch existiert
+                const ageField = document.getElementById('age_input');
+                const genderField = document.getElementById('gender_input');
+                
+                data.age = ageField ? ageField.value : 'N/A';
+                data.gender = genderField ? genderField.value : 'N/A';
+
+                // Global für alle folgenden Trials speichern
                 jsPsych.data.addProperties({
-                    age: ageVal,
-                    gender: genderVal
+                    age: data.age,
+                    gender: data.gender
                 });
             }
         };
-        timeline.push(demographics);
 
         const instructions = {
             type: jsPsychHtmlKeyboardResponse,
