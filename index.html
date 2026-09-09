@@ -291,7 +291,7 @@
 
         const searchDisplay = {
             type: jsPsychCanvasKeyboardResponse,
-            canvas_draw: function(canvas) {
+            stimulus: function(canvas) { // Hier von canvas_draw zu stimulus geändert
                 const condition = jsPsych.timelineVariable('condition');
                 const oldDisplayConfig = jsPsych.timelineVariable('oldConfig');
                 
