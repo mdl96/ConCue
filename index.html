@@ -83,7 +83,7 @@
         };
         timeline.push(welcome);
 
-   const demographics = {
+        const demographics = {
             type: jsPsychHtmlKeyboardResponse,
             stimulus: `
                 <div class="demo-container">
@@ -102,24 +102,22 @@
             `,
             choices: [' '],
             on_load: function() {
-                // Verhindert, dass die Leertaste das Input-Feld beeinträchtigt, falls reingeklickt wurde
                 document.getElementById('age_input').focus();
             },
             on_finish: function(data) {
-                // Werte sicher auslesen, solange das DOM-Element noch existiert
                 const ageField = document.getElementById('age_input');
                 const genderField = document.getElementById('gender_input');
                 
                 data.age = ageField ? ageField.value : 'N/A';
                 data.gender = genderField ? genderField.value : 'N/A';
 
-                // Global für alle folgenden Trials speichern
                 jsPsych.data.addProperties({
                     age: data.age,
                     gender: data.gender
                 });
             }
         };
+        timeline.push(demographics);
 
         const instructions = {
             type: jsPsychHtmlKeyboardResponse,
@@ -136,6 +134,7 @@
                 </div>
                 <br><br>
                 <p>Versuche, deinen Blick zu Beginn jedes Durchgangs auf das Fixationskreuz (+) in der Mitte zu richten.</p>
+                <p>Nach jeder Antwort erhältst du ein kurzes Feedback.</p>
                 <p>Drücke die <strong>Leertaste</strong>, um das Experiment zu starten!</p>
             `,
             choices: [' ']
@@ -279,7 +278,7 @@
         }
 
         // ==========================================
-        // TASK 4: Ablauf eines einzelnen Trials
+        // TASK 4: Ablauf eines einzelnen Trials (mit Feedback)
         // ==========================================
         const fixation = {
             type: jsPsychHtmlKeyboardResponse,
@@ -291,7 +290,7 @@
 
         const searchDisplay = {
             type: jsPsychCanvasKeyboardResponse,
-            stimulus: function(canvas) { // Hier von canvas_draw zu stimulus geändert
+            stimulus: function(canvas) {
                 const condition = jsPsych.timelineVariable('condition');
                 const oldDisplayConfig = jsPsych.timelineVariable('oldConfig');
                 
@@ -312,6 +311,22 @@
             on_finish: function(data) {
                 data.correct = jsPsych.pluginAPI.compareKeys(data.response, data.correct_response);
             }
+        };
+
+        // Das neue Feedback-Trial
+        const feedback = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: function() {
+                const last_trial = jsPsych.data.get().last(1).values()[0];
+                if (last_trial.correct) {
+                    return '<div style="font-size: 30px; color: green; font-weight: bold;">Richtig!</div>';
+                } else {
+                    return '<div style="font-size: 30px; color: red; font-weight: bold;">Falsch!</div>';
+                }
+            },
+            choices: "NO_KEYS",
+            trial_duration: 500, // 500 ms Feedback anzeigen
+            data: { task: 'feedback' }
         };
 
         const iti = {
@@ -347,7 +362,7 @@
 
         for (let b = 1; b <= EXPERIMENT_CONFIG.numBlocks; b++) {
             const block_node = {
-                timeline: [fixation, searchDisplay, iti],
+                timeline: [fixation, searchDisplay, feedback, iti], // Feedback hier integriert
                 timeline_variables: generateBlockVariables(),
                 data: { block_num: b } 
             };
