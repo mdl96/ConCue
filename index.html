@@ -61,8 +61,8 @@
             cellSize: 80,       
             stimSize: 30,       
             keys: {
-                left: 'f',      
-                right: 'j'      
+                left: 'f',      // Target-Stamm zeigt nach links -> Taste F
+                right: 'j'      // Target-Stamm zeigt nach rechts -> Taste J
             }
         };
 
@@ -125,7 +125,7 @@
                 <h2>Instruktionen</h2>
                 <p>In diesem Experiment wirst du auf dem Bildschirm viele "L"s und genau <strong>ein "T"</strong> sehen.</p>
                 <p>Deine Aufgabe ist es, so schnell und fehlerfrei wie möglich das <strong>T</strong> zu finden.</p>
-                <p>Das "T" liegt auf der Seite und ist entweder nach links oder nach rechts gedreht.</p>
+                <p>Das "T" liegt auf der Seite. Achte darauf, in welche Richtung der <strong>Stamm des T</strong> zeigt.</p>
                 <br>
                 <div style="background-color: #fff; border: 1px solid #ccc; padding: 15px; display: inline-block; border-radius: 8px;">
                     <p>Reagiere wie folgt:</p>
@@ -147,7 +147,8 @@
         function drawTarget(ctx, x, y, size, direction) {
             ctx.save();
             ctx.translate(x, y);
-            ctx.rotate(direction === 'left' ? -Math.PI/2 : Math.PI/2);
+            // Korrigierte Rotation: 'left' rotiert ins Positive (Stamm zeigt nach links), 'right' ins Negative
+            ctx.rotate(direction === 'left' ? Math.PI/2 : -Math.PI/2);
             
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 3;
@@ -278,7 +279,7 @@
         }
 
         // ==========================================
-        // TASK 4: Ablauf eines einzelnen Trials (mit Feedback)
+        // TASK 4: Ablauf eines einzelnen Trials
         // ==========================================
         const fixation = {
             type: jsPsychHtmlKeyboardResponse,
@@ -313,7 +314,6 @@
             }
         };
 
-        // Das neue Feedback-Trial
         const feedback = {
             type: jsPsychHtmlKeyboardResponse,
             stimulus: function() {
@@ -325,7 +325,7 @@
                 }
             },
             choices: "NO_KEYS",
-            trial_duration: 500, // 500 ms Feedback anzeigen
+            trial_duration: 500,
             data: { task: 'feedback' }
         };
 
@@ -362,7 +362,7 @@
 
         for (let b = 1; b <= EXPERIMENT_CONFIG.numBlocks; b++) {
             const block_node = {
-                timeline: [fixation, searchDisplay, feedback, iti], // Feedback hier integriert
+                timeline: [fixation, searchDisplay, feedback, iti],
                 timeline_variables: generateBlockVariables(),
                 data: { block_num: b } 
             };
